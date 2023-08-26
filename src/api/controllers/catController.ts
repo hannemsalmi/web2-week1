@@ -22,11 +22,11 @@ const catListGet = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 const catGet = async (
-  req: Request<{id: number}, {}, {}>,
-  res: Response,
+  req: Request<{id:number}, {}, {}>, 
+  res: Response, 
   next: NextFunction
-) => {
-  /* const errors = validationResult(req);
+  ) => {
+  const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const messages: string = errors
       .array()
@@ -35,7 +35,7 @@ const catGet = async (
     console.log('cat_post validation', messages);
     next(new CustomError(messages, 400));
     return;
-  } */
+  }
 
   try {
     const cat = await getCat(req.params.id);
@@ -51,10 +51,9 @@ const catGet = async (
 // catPost should use req.file to get filename
 // catPost should use res.locals.coords to get lat and lng (see middlewares.ts)
 // catPost should use req.user to get user_id and role
-
 const catPost = async (
   req: Request<{}, {}, PostCat>,
-  res: Response,
+  res: Response, 
   next: NextFunction
 ) => {
   const errors = validationResult(req);
@@ -67,25 +66,32 @@ const catPost = async (
     next(new CustomError(messages, 400));
     return;
   }
+
   try {
-    const cat: PostCat = req.body;
-
-    if (req.file) {
-      cat.filename = req.file.filename;
+    const lat = res.locals.coords[0];
+    const lng = res.locals.coords[1];
+    if (!req.file) {
+      next(new CustomError('No file found', 404));
+      return;
     }
-
-    cat.lat = res.locals.coords.lat;
-    cat.lng = res.locals.coords.lng;
-
-    if (req.user) {
-      cat.owner = (req.user as User).user_id;
+    if (!req.user) {
+      next(new CustomError('No user found', 404));
+      return;
     }
-
-    const result = await addCat(cat);
+    const filename = req.file.filename;
+    const {cat_name, birthdate, weight } = req.body;
+    const newCat: PostCat = {
+      filename: filename,
+      cat_name: cat_name,
+      lat: lat,
+      lng: lng,
+      birthdate: birthdate,
+      weight: weight,
+      owner: (req.user as User).user_id,
+    };
+    const result = await addCat(newCat);
     if (result) {
-      res.json({
-        message: 'cat added',
-      });
+      res.json({ message: 'cat added', id: result });
     }
   } catch (error) {
     next(error);
@@ -132,10 +138,9 @@ const catPut = async (
 // TODO: create catDelete function to delete cat
 // catDelete should use deleteCat function from catModel
 // catDelete should use validationResult to validate req.params.id
-
 const catDelete = async (
-  req: Request<{id: string}, {}, {}>,
-  res: Response,
+  req: Request<{id: string}, {}, {}>, 
+  res: Response, 
   next: NextFunction
 ) => {
   const errors = validationResult(req);
@@ -144,19 +149,16 @@ const catDelete = async (
       .array()
       .map((error) => `${error.msg}: ${error.param}`)
       .join(', ');
-    console.log('cat_post validation', messages);
+    console.log('cat_delete validation', messages);
     next(new CustomError(messages, 400));
     return;
   }
 
   try {
-    const catId = parseInt(req.params.id);
-
-    const result = await deleteCat(catId);
+    const id = parseInt(req.params.id);
+    const result = await deleteCat(id);
     if (result) {
-      res.json({
-        message: 'cat deleted',
-      });
+      res.json({ message: 'cat', id });
     }
   } catch (error) {
     next(error);

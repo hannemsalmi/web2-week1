@@ -35,10 +35,9 @@ const getUser = async (userId: string): Promise<User> => {
 
 // TODO: create addUser function
 const addUser = async (data: PostUser): Promise<number> => {
-  const hashedPassword = bcrypt.hashSync(data.password, salt);
   const sql = promisePool.format(
     'INSERT INTO sssf_user (user_name, email, role, password) VALUES (?, ?, ?, ?);',
-    [data.user_name, data.email, data.role, hashedPassword]
+    [data.user_name, data.email, data.role, data.password]
   );
   const [headers] = await promisePool.execute<ResultSetHeader>(sql);
   if (headers.affectedRows === 0) {
@@ -80,7 +79,7 @@ const getUserLogin = async (email: string): Promise<User> => {
     [email]
   );
   if (rows.length === 0) {
-    throw new CustomError('Invalid username/password', 200);
+    throw new CustomError('Invalid username/password', 400);
   }
   return rows[0];
 };
